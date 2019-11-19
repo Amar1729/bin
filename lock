@@ -1,9 +1,11 @@
 #!/bin/bash
 
+# attempts to handle differences between how i like macOS/Linux locking
+
 # Open the screensaver with `lock` (for use with hotkey daemon)
 # note - should set preferences to lock the screen after 5s of screensaver
 # location of app changes in High Sierra, this should be robust
-_lock () {
+_darwin_lock () {
     local SYS_LIB="/System/Library"
     local SIERRA_FALLBACK="$SYS_LIB/Frameworks/ScreenSaver.framework/Versions/Current/Resources/ScreenSaverEngine.app"
     local HIGH_SIERRA_SCRSVR="$SYS_LIB/CoreServices/ScreenSaverEngine.app"
@@ -12,4 +14,102 @@ _lock () {
 	open -a $SCREEN_ENGINE
 }
 
-_lock
+init_filenames() {
+	#$1 resolution
+
+	# create folder in ~/.cache/i3lock directory
+	res_folder="$HOME/.cache/i3lock/$1"
+	folder="$HOME/.cache/i3lock/current"
+        echo "Got" $@ $res_folder
+	if [ ! -d  $folder -o -n "$2" ]
+	then
+	    rm $folder
+	    ln -s $res_folder $folder
+	fi
+
+	# ratio for rectangle to be drawn for time background on lockscreen
+	# Original Image
+	orig_wall="$folder/wall.png"
+
+	# Versions (from here)
+	# You can use these images to set different versions as wallpaper
+	# lockscreen background.
+	resized="$folder/resized.png" # resized image for your resolution
+
+	# images to be used as wallpaper
+	dim="$folder/dim.png" # image with subtle overlay of black
+	blur="$folder/blur.png" # blurred version
+	dimblur="$folder/dimblur.png"
+
+	# lockscreen images (images to be used as lockscreen background)
+	l_resized="$folder/l_resized.png"
+	l_dim="$folder/l_dim.png"
+	l_blur="$folder/l_blur.png"
+	l_dimblur="$folder/l_dimblur.png"
+}
+
+# find your resolution so images can be resized to match your screen resolution
+res=$(xdpyinfo | grep dimensions | sed -r 's/^[^0-9]*([0-9]+x[0-9]+).*$/\1/')
+init_filenames $res
+
+prelock() {
+    if [ ! -z "$(pidof dunst)" ] ; then
+        pkill -u "$USER" -USR1 dunst
+    fi
+
+    if [ ! -z "$(pidof rofi)" ]; then
+        pkill -u "$USER" -USR1 rofi
+    fi
+}
+
+lock() {
+	#$1 image path
+	letterEnteredColor=d23c3dff
+	letterRemovedColor=d23c3dff
+	passwordCorrect=00000000
+	passwordIncorrect=d23c3dff
+	background=00000000
+	foreground=ffffffff
+	i3lock \
+		-t -i "$1" \
+		--timepos="x+110:h-70" \
+		--datepos="x+135:h-45" \
+		--clock --datestr "Type password to unlock..." \
+		--insidecolor=$background --ringcolor=$foreground --line-uses-inside \
+		--keyhlcolor=$letterEnteredColor --bshlcolor=$letterRemovedColor --separatorcolor=$background \
+		--insidevercolor=$passwordCorrect --insidewrongcolor=$passwordIncorrect \
+		--ringvercolor=$foreground --ringwrongcolor=$foreground --indpos="x+280:h-70" \
+		--radius=20 --ring-width=4 --veriftext="" --wrongtext="" \
+		--verifcolor="$foreground" --timecolor="$foreground" --datecolor="$foreground" \
+		--noinputtext="" --force-clock $lockargs
+}
+
+postlock() {
+    if [ ! -z "$(pidof dunst)" ] ; then
+        pkill -u "$USER" -USR2 dunst
+    fi
+
+    if [ ! -z "$(pidof rofi)" ]; then
+        pkill -u "$USER" -USR2 rofi
+    fi
+}
+
+rec_get_random() {
+	dir="$1"
+	if [ ! -d "$dir" ]; then
+		user_input="$dir"
+		return
+	fi
+	dir=($dir/*)
+	dir=${dir[RANDOM % ${#dir[@]}]}
+	rec_get_random "$dir"
+}
+
+_linux_lock () { lock; }
+
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    _darwin_lock
+else
+    # does this work ?
+    _linux_lock
+fi
