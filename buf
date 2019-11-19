@@ -10,9 +10,13 @@ copy () {
 }
 
 paste () {
-    for f in $(cat $BUFFER_FILE); do
-        cp $f ./
-    done
+    while read -r f || [[ -n "$f" ]]; do
+        [[ -e "$f" ]] && cp "$f" ./
+    done < "$BUFFER_FILE"
+}
+
+show () {
+    cat "$BUFFER_FILE"
 }
 
 op=$1
@@ -24,6 +28,9 @@ case $op in
         ;;
     p|paste)
         paste
+        ;;
+    s|show)
+        show
         ;;
     *)
         echo "Unsupported operation $op"
