@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+# use pywal to update spicetify colors (mac)
+
+main () {
+    source "$HOME/.cache/wal/colors.sh"
+
+    local fg bg c1 c2 c3
+
+    fg=${foreground/\#/}
+    bg=${background/\#/}
+    c1=${color1/\#/}
+    c2=${color2/\#/}
+    c3=${color3/\#/}
+
+    cat <<EOS
+[Base]
+main_fg                               = ${c2}
+secondary_fg                          = FFFFFF
+main_bg                               = ${bg}
+sidebar_and_player_bg                 = ${bg}
+
+tl_selected_hover                     = EEEEEE
+
+cover_overlay_and_shadow              = ${bg}
+indicator_fg_and_button_bg            = FFFFFF
+pressing_fg                           = ${c1}
+slider_bg                             = FFFFFF
+
+sidebar_indicator_and_hover_button_bg = FFFFFF
+sidebar_active_button_fg              = ${bg}
+
+scrollbar_fg_and_selected_row_bg      = EBEBEB
+pressing_button_fg                    = ${bg}
+pressing_button_bg                    = FFFFFF
+selected_button                       = ${c2}
+miscellaneous_bg                      = ${bg}
+miscellaneous_hover_bg                = ${c3}
+preserve_1                            = ${bg}
+EOS
+}
+
+main | tee "$HOME/.config/spicetify/Themes/current/color.ini"
