@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+
+# on macOS, if we detect that Spotify.app is playing an ad, mute sound and re-enable after add is done
+
+DEFAULT_VOL=50
+
+log () {
+    logger -is -t spotify-mute-ads "$1"
+}
+
+get_volume () { spotify vol show | sed 's/.* //;s/\..*//'; }
+
+set_volume () { spotify vol "$1"; }
+
+is_spotify_running () {
+    if [[ $(osascript -e 'application "Spotify" is running') == "true" ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+is_ad_playing () {
+    curr="$(spotify status track)"
+    if [[ "$curr" == "Advertisement" ]]; then
+        return 0
+    elif [[ "$curr" == *"Spotify"* ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+ad_handler () {
+    log "Detected ad playing; muting."
+
+    local vol
+    vol=$(get_volume)
+    vol=$((vol+1))  # fix volume get/show rounding err
+
+    # actually set volume properly (maybe this script was killed in middle of ad)
+    if [[ $vol -eq 1 ]]; then
+        vol=$DEFAULT_VOL
+    fi
+
+    set_volume 0
+    while :; do
+        if ! is_ad_playing; then
+            log "Ads done: restarting song and restoring volume $vol"
+            spotify replay
+            set_volume "$vol"
+            break
+        fi
+
+        sleep 5
+        log "Ad still playing ..."
+    done
+}
+
+main () {
+    while :; do
+        if is_spotify_running; then
+            if is_ad_playing; then
+                ad_handler
+            fi
+        else
+            log "Spotify.app is not running"
+            # sleep for more time if spotify isn't running
+            sleep 55
+        fi
+
+        sleep 5
+    done
+}
+
+if command -v spotify &>/dev/null; then
+    main
+else
+    log "Shpotify (CLI tool for Spotify) not installed"
+fi
