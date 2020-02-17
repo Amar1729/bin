@@ -2,6 +2,10 @@
 
 # on macOS, if we detect that Spotify.app is playing an ad, mute sound and re-enable after add is done
 
+# see ./org.spotify.mute.ads.plist for the plist file i use for auto-running this on macOS
+# copy it to ~/Library/LaunchAgents/org.spotify.mute.ads.plist and load with:
+# sudo launchctl load -w ~/Library/LaunchAgents/org.spotify.mute.ads.plist
+
 DEFAULT_VOL=50
 
 log () {

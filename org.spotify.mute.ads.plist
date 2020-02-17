@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>PATH</key>
+      <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:</string>
+    </dict>
+    <key>Label</key>
+    <string>com.startup</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>/Users/paula1/.bin/spotify-mute-ads</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <false/>
+    <key>LaunchOnlyOnce</key>        
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/spotify-mute.stdout</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/spotify-mute.stderr</string>
+    <key>UserName</key>
+    <string>paula1</string>
+    <key>GroupName</key>
+    <string>paula1</string>
+    <key>InitGroups</key>
+    <true/>
+  </dict>
+</plist>
