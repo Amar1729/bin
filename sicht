@@ -33,7 +33,7 @@ if [[ -n "$1" ]]; then
             _toggle
             ;;
         *)
-            print "incorrect usage: -r|-k|-t"
+            printf "incorrect usage: -r|-k|-t"
             ;;
     esac
 else
