@@ -1,0 +1,55 @@
+#! /usr/bin/env bash
+
+# wrapper for liccheck when using pkg managers other than pip
+
+STRATEGY="strategy.ini"
+
+_col () {
+    # colorize output statements (sends to stderr)
+    RED="\033[31;1m"
+    NOC="\e[0;0m"
+
+    if [[ -n "$1" ]]; then
+        echo "====" >&2
+        echo -e "${RED}$1${NOC}" >&2
+    fi
+    echo "====" >&2
+}
+
+_pipenv () {
+    # wrapper for pipenv that handles liccheck
+
+    _col "Creating requirements ..."
+    (pipenv lock -r; pipenv lock -r -d) | sed '/^-/d' > requirements.txt
+
+    _col "Creating venv..."
+    virtualenv -p python3 venv
+    venv/bin/pip install -r requirements.txt
+
+    _col "Installing liccheck..."
+    venv/bin/pip install liccheck
+
+    _col "Checking licenses of requirements.txt:"
+    cat requirements.txt >&2
+    _col ""
+    venv/bin/liccheck -s "$STRATEGY" -r requirements.txt
+}
+
+main () {
+    if [[ ! -f "$STRATEGY" ]]; then
+        echo "Ensure strategy file: $STRATEGY exists"
+        exit 2
+    fi
+
+    case "$1" in
+        --pipenv)
+            _pipenv
+            ;;
+        *)
+            echo "Unrecognized handler: $1" >&2
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"
