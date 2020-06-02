@@ -8,11 +8,6 @@
 # modified for mac
 # based off of: https://github.com/sdushantha/bin/blob/master/utils/ocr
 
-DARK=0
-if [[ "$1" == "--dark" ]]; then
-    DARK=1
-fi
-
 TEXT_FILE="/tmp/ocr.txt"
 IMAGE_FILE="/tmp/ocr.png"
 
@@ -25,15 +20,11 @@ _notify () {
 }
 
 # Check if the needed dependencies are installed
+dependencies=(tesseract convert)
 if [[ "$(uname -s)" == "Darwin" ]]; then
-    dependencies=(tesseract screencapture pbcopy)
+    dependencies+=(pbcopy)
 else
-    dependencies=(tesseract maim xclip)
-fi
-
-if [[ "$DARK" -eq 1 ]]; then
-    # part of imagemagick suite
-    dependencies+=(convert)
+    dependencies+=(maim xclip)
 fi
 
 for dependency in "${dependencies[@]}"; do
@@ -69,10 +60,21 @@ STATUS=$?
 # specify /tmp/ocr.txt as the file path, tesseract would out the text to 
 # /tmp/ocr.txt.txt
 
-# tesseract doesn't like light-on-dark text, so negate colors if we're given --dark flag 
-if [[ "$DARK" -eq 1 ]]; then
-    convert "$IMAGE_FILE" -channel RGB -negate "$IMAGE_FILE"
-fi
+# try to determine darkness:
+is_dark () {
+    # light pics have a gray colorspace > 0.50
+    quantity="$(convert "$IMAGE_FILE" -colorspace gray -resize 1x1 -fx "debug(u)" null: 2>&1|head -n1|grep -o "\d\.\d*")"
+    if [[ $(echo "$quantity * 100 > 50" | bc -l) -eq 1 ]]; then
+        # false
+        return 1
+    else
+        # true
+        return 0
+    fi
+}
+
+# tesseract doesn't like light-on-dark text, so negate colors if we determine the img is dark
+if is_dark; then convert "$IMAGE_FILE" -channel RGB -negate "$IMAGE_FILE"; fi
 tesseract "$IMAGE_FILE" "${TEXT_FILE//\.txt/}"
 
 
