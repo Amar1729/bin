@@ -1,0 +1,65 @@
+#! /usr/bin/env bash
+
+# Ensure the windows on a space given by $1 are resized to fullscreen
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SCRIPT_NAME="${DIR}/$(basename "${BASH_SOURCE[0]}")"
+
+on_window_create () {
+    if [ "$(yabai -m query --spaces --space | jq '.index')" -eq "$1" ]; then
+        yabai -m window "$2" --grid 1:1:0:0:1:1
+    fi
+}
+
+on_space_change () {
+    if [ "$(yabai -m query --spaces --space | jq '.index')" -eq "$1" ]; then
+        yabai -m query --windows --space \
+            | jq 'map(select(.floating == 0)) | .[].id' \
+            | xargs -n1 -I{} yabai -m window {} --grid 1:1:0:0:1:1
+    fi
+}
+
+main () {
+    if ! command -v jq > /dev/null; then
+        echo "requires jq" >&2
+        return 1
+    fi
+
+    case "$1" in
+        --space-changed)
+            shift
+            on_space_change "$@"
+            return 0
+            ;;
+        --window-created)
+            shift
+            on_window_create "$@"
+            return 0
+            ;;
+        --rm)
+            yabai -m signal --remove float-monocle-space_changed-"$2"
+            yabai -m signal --remove float-monocle-window_created-"$2"
+            return 0
+            ;;
+        *)
+            target="$1"
+            ;;
+    esac
+
+    if [ -z "$target" ]; then
+        echo "requires target space id" >&2
+        return 1
+    fi
+
+    yabai -m signal --add event=space_changed action="$SCRIPT_NAME --space-changed $target" \
+        label=float-monocle-space_changed-"$target"
+
+    # odd quoting: do NOT expand YABAI_WINDOW_ID on signal creation (has to be passed literally when signal is fired)
+    yabai -m signal --add event=window_created action="$SCRIPT_NAME --window-created $target $"'YABAI_WINDOW_ID' \
+        label=float-monocle-window_created-"$target"
+
+    # on successful execution, delete the setup signal define by our .yabairc
+    yabai -m signal --remove monocle-setup-"$target" || true
+}
+
+main "$@"
