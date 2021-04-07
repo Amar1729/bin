@@ -21,7 +21,10 @@ main () {
     yabai -m signal --add event=window_created action="$0 $1" label=sustain-monocle-create-"$1"
     yabai -m signal --add event=window_destroyed action="$0 $1" label=sustain-monocle-destroy-"$1"
 
-    if [ "$(yabai -m query --spaces --space | jq '.index')" -eq "$target" ]; then
+    yabai -m signal --add event=application_launched action="$0 $1" label=sustain-monocle-launch-"$1"
+    yabai -m signal --add event=application_terminated action="$0 $1" label=sustain-monocle-terminate-"$1"
+
+    if [ "$(yabai -m query --spaces --space | jq '.index')" = "$target" ]; then
         yabai -m query --windows --space \
             | jq 'map(select(.floating == 0 and ."zoom-fullscreen" == 0)) | .[].id' \
             | xargs -n1 -I{} yabai -m window {} --toggle zoom-fullscreen
