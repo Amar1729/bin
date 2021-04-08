@@ -57,6 +57,11 @@ main () {
         return 1
     fi
 
+    yabai -m config --space "$target" layout float
+
+    # when this script is called, retile current space if it's the target
+    on_space_change "$target"
+
     yabai -m signal --add event=space_changed action="$SCRIPT_NAME --space-changed $target" \
         label=float-monocle-space_changed-"$target"
 
