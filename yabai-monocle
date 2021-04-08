@@ -39,8 +39,13 @@ main () {
             return 0
             ;;
         --rm)
-            yabai -m signal --remove float-monocle-space_changed-"$2"
-            yabai -m signal --remove float-monocle-window_created-"$2"
+            if [ "$2" == "curr" ]; then
+                target="$(yabai -m query --spaces --space | jq '.index')"
+            else
+                target="$2"
+            fi
+            yabai -m signal --remove float-monocle-space_changed-"$target"
+            yabai -m signal --remove float-monocle-window_created-"$target"
             return 0
             ;;
         curr)
