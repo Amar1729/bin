@@ -7,7 +7,9 @@ SCRIPT_NAME="${DIR}/$(basename "${BASH_SOURCE[0]}")"
 
 on_window_create () {
     if [ "$(yabai -m query --spaces --space | jq '.index')" -eq "$1" ]; then
-        yabai -m window "$2" --grid 1:1:0:0:1:1
+        if [ "$(yabai -m query --windows --window "$2" | jq '.floating')" -eq 0 ]; then
+            yabai -m window "$2" --grid 1:1:0:0:1:1
+        fi
     fi
 }
 
