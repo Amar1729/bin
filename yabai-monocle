@@ -57,9 +57,6 @@ main () {
     # odd quoting: do NOT expand YABAI_WINDOW_ID on signal creation (has to be passed literally when signal is fired)
     yabai -m signal --add event=window_created action="$SCRIPT_NAME --window-created $target $"'YABAI_WINDOW_ID' \
         label=float-monocle-window_created-"$target"
-
-    # on successful execution, delete the setup signal define by our .yabairc
-    yabai -m signal --remove monocle-setup-"$target" || true
 }
 
 main "$@"
