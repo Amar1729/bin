@@ -1,0 +1,30 @@
+#! /usr/bin/env bash
+
+# play youtube links from subreddit posts.
+# pass any/multiple subreddit names (e.g. progrock, listentothis) as arguments.
+
+player () {
+    echo -e "$1 ... \n"
+    curl -A "$(head /dev/urandom | gtr -dc 'A-Za-z' | head -c 10)" -s https://www.reddit.com/r/"$subs".json \
+        | jq -r '.data.children | .[] | select(.data.url | contains("youtu")) | .data.url' \
+        | mpv --no-video --playlist=-
+}
+
+main () {
+    if [[ -z "$1" ]]; then
+        subs="electronicmusic"
+    else
+        subs=""
+        while [[ "$#" -gt 0 ]]; do
+            subs+="$1"
+            subs+="+"
+            shift
+        done
+
+        subs="${subs%+}"
+    fi
+
+    player "$subs"
+}
+
+main "$@"
