@@ -43,6 +43,10 @@ main () {
             yabai -m signal --remove float-monocle-window_created-"$2"
             return 0
             ;;
+        curr)
+            # shortcut for setting current space as monocle mode
+            target="$(yabai -m query --spaces --space | jq '.index')"
+            ;;
         *)
             target="$1"
             ;;
