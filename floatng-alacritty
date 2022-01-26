@@ -1,0 +1,31 @@
+#! /usr/bin/env bash
+
+# Create, float, and focus a new alacritty window (similar to "dropdown" windows in iterm)
+
+# Assumes no race conditions, like switching to a new space immediately after issuing keybind.
+
+typeset -a current_windows
+typeset -a new_windows
+
+current_space="$(yabai -m query --spaces --space | jq '.index')"
+
+current_windows=($(yabai -m query --windows --space "$current_space"| jq '.[].id'))
+
+# alacritty >= 0.10.0
+if ! alacritty msg create-window; then
+    open -a /Applications/Alacritty.app
+fi
+
+# there seems to be a sweet spot for alacritty spawning a new window and the next
+# yabai query seeing it. might have to be changed per computer?
+sleep 0.20
+
+new_windows=($(yabai -m query --windows --space "$current_space" | jq '.[].id'))
+
+for window in "${new_windows[@]}"; do
+    if [[ ! " ${current_windows[*]} " =~ " ${window} " ]]; then
+        yabai -m window "${window}" --toggle float
+        yabai -m window "${window}" --grid 100:100:57:6:37:42
+        yabai -m window --focus "${window}"
+    fi
+done
