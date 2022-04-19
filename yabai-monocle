@@ -2,12 +2,14 @@
 
 # Ensure the windows on a space given by $1 are resized to fullscreen
 
+set -x
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 SCRIPT_NAME="${DIR}/$(basename "${BASH_SOURCE[0]}")"
 
 on_window_create () {
     if [ "$(yabai -m query --spaces --space | jq '.index')" -eq "$1" ]; then
-        if [ "$(yabai -m query --windows --window "$2" | jq '.floating')" -eq 0 ]; then
+        if [ "$(yabai -m query --windows --window "$2" | jq '."is-floating"')" == "false" ]; then
             yabai -m window "$2" --grid 1:1:0:0:1:1
         fi
     fi
@@ -16,7 +18,7 @@ on_window_create () {
 on_space_change () {
     if [ "$(yabai -m query --spaces --space | jq '.index')" -eq "$1" ]; then
         yabai -m query --windows --space \
-            | jq 'map(select(.floating == 0)) | .[].id' \
+            | jq 'map(select(."is-floating" == false)) | .[].id' \
             | xargs -n1 -I{} yabai -m window {} --grid 1:1:0:0:1:1
     fi
 }
