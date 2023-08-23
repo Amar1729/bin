@@ -1,0 +1,79 @@
+#! /usr/bin/env bash
+
+# Resize and center a window (given by its ID) on the first video-playing window on-screen.
+# This is meant for using in a window_created rule to auto-center Picture-in-Picture windows, eg:
+#
+# yabai -m signal --add \
+#     label="Resize Firefox PiP windows to match parent" event=window_created \
+#     app="Firefox" title="Picture-in-Picture" \
+#     action="$HOME/.bin/yabai-resize-pip $"'YABAI_WINDOW_ID'
+
+set -ex
+
+if ! command -v yabai >/dev/null; then
+    exit 1
+fi
+
+if ! command -v jq >/dev/null; then
+    exit 1
+fi
+
+# (hacky)
+# guess the parent by title
+# (look for windows with titles that might commonly spawn PiP windows)
+# TODO ? use a whitelist of hard-coding yt?
+heuristic_find_parent_id () {
+    yabai -m query --windows --space \
+        | jq 'map(select(.["is-minimized"] == false) and select(.title | contains("YouTube"))) | .[0].id'
+}
+
+# find coordinates of a frame of a given window ID
+wid_coords () {
+    yabai -m query --windows --window "$1" | jq '.frame | .x, .y, .w, .h'
+}
+
+# find the x/y coordinates of a given window ID
+wid_center () {
+    local x y w h
+    set +e
+    IFS=$'\n' read -r -d '' x y w h < <(wid_coords "$1")
+    set -e
+
+    echo $(( x + w/2 ))
+    echo $(( y + h/2 ))
+}
+
+# recenter a source window onto a target window
+center_on_other () {
+    source_wid="$1"
+    target_wid="$2"
+
+    set +e
+    local s_x s_y t_x t_y
+    IFS=$'\n' read -r -d '' s_x s_y < <(wid_center "$source_wid")
+    IFS=$'\n' read -r -d '' t_x t_y < <(wid_center "$target_wid")
+    set -e
+
+    dx=$(( t_x - s_x ))
+    dy=$(( t_y - s_y ))
+
+    yabai -m window "$source_wid" --move "rel:$dx:$dy"
+}
+
+# resize and move a window to the dimensions and location of its "parent"
+main () {
+    local target_wid
+    target_wid="$1"
+
+    parent_wid="$(heuristic_find_parent_id)"
+
+    set +e
+    local x y w h
+    IFS=$'\n' read -r -d '' x y w h < <(wid_coords "$parent_wid")
+    set -e
+
+    yabai -m window "$target_wid" --resize "abs:$w:$h"
+    center_on_other "$target_wid" "$parent_wid"
+}
+
+main "$@"
