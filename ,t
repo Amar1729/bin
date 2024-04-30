@@ -1,0 +1,91 @@
+#! /usr/bin/env sh
+
+# ,t | tmux-find-cwd
+# Quickly switch to a tmux pane from anywhere (outside or inside tmux).
+# (named ",t" for super-quick usage from shell)
+# from inside tmux:
+#   opens a tmux display-popup, where the default choices are any pane in the same session
+# from outside:
+#   opens an FZF selection, where the default choices are any pane in any non-attached session
+#
+# TODO: add a hotkey to allow cycling through attached/other sessions
+# TODO: add a hotkey(?) to allow detaching an attached session in order to switch to it
+
+# https://superuser.com/questions/1150431/how-to-select-window-by-working-directory-in-tmux
+
+# TODO: allow passing an argument for `attach-session -d` to detach other clients from a target session
+fuzzy_jump_to_session () {
+    preview_cmd="tmux capture-pane -ep -t '{3}'"
+    # header="tmux list-panes -s -F '#{pane_current_command}' -t {3}"
+    
+    # from outside tmux, jump to a specific pane.
+    # -a: all panes
+    # -f: filters out any session that's already attached
+    tmux list-panes -a \
+        -f '#{?session_attached,0,1}' \
+        -F '#{session_name} #{window_id} #{pane_id} #{pane_current_command} #{pane_current_path}' |
+        sed -e "s@$HOME@\$HOME@" |
+        FZF_DEFAULT_OPTS="--height ${FZF_TMUX_HEIGHT:-98%} \
+            --reverse \
+            $FZF_DEFAULT_OPTS $FZF_CTRL_T_OPTS" \
+            fzf -m --cycle --preview="$preview_cmd" --preview-window border-none \
+            --nth 1,4,5 |
+        while read -r item; do
+            echo "$item" | awk '{print $1 " " $2 " " $3}'
+        done
+}
+
+fuzzy_jump_to_pane () {
+    # from inside tmux, jump to a specific pane.
+
+    # TODO:
+    # add hotkey to cycle between:
+    # 1. panes in current session
+    # 2. panes only in other (non-attached?) sessions
+    # 3. (somehow...?) panes in attached sessions that i want to be detached on selection
+
+    # -s: current session panes only
+    header="Panes in current session:"
+    tmux list-panes -s \
+        -F '#{window_id} #{pane_id} #{pane_current_command} #{pane_current_path}' |
+        sed -e "s@$HOME@\$HOME@" |
+        FZF_DEFAULT_OPTS="--height ${FZF_TMUX_HEIGHT:-25%} \
+            --reverse \
+            $FZF_DEFAULT_OPTS $FZF_CTRL_T_OPTS" \
+            fzf -m --cycle --border=none \
+            --header="$header" \
+            --with-nth 3,4 |
+        while read -r window pane _cmd _pth; do
+            tmux select-window -t "$window" && \
+                tmux select-pane -t "$pane"
+            return
+        done
+}
+
+fuzzy_select_from_anywhere () {
+    if [ -n "$TMUX" ]; then
+        fuzzy_jump_to_pane
+    else
+        # # this approach doesn't work, cause it's in a subshell (thinks i'm not in a terminal).
+        # fuzzy_jump_to_session |
+        #     while read -r session window pane; do
+        #         tmux select-window -t "$window" && \
+        #             tmux select-pane -t "$pane" && \
+        #             tmux attach-session -t "$session"
+        #     done
+
+        output="$(fuzzy_jump_to_session)"
+        session=$(echo "$output" | awk '{print $1}')
+        window=$(echo "$output" | awk '{print $2}')
+        pane=$(echo "$output" | awk '{print $3}')
+
+        [ -z "$session" ] && exit 0
+
+        # funny ordering to ensure the right window+pane are active before we attach.
+        tmux select-window -t "$window" && \
+            tmux select-pane -t "$pane" && \
+            tmux attach-session -t "$session"
+    fi
+}
+
+fuzzy_select_from_anywhere
