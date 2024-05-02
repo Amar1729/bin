@@ -15,6 +15,22 @@
 # is just "$0" robust? 'sh' won't have BASH_SOURCE defined.
 SCRIPT="$0"
 
+PREVIEW_CMD="tmux capture-pane -ep -t '{3}'"
+# header="tmux list-panes -s -F '#{pane_current_command}' -t {3}"
+
+# TODO: kind of want to make prompt?/header change on smaller screen sizes?
+# for now, hide the preview if we have size <10.
+FZF_DEFAULT_OPTS="
+    -m
+    --cycle
+    --reverse
+    --preview '$PREVIEW_CMD'
+    --preview-window 'down,border-top,<10(hidden)'
+    --height ${FZF_TMUX_HEIGHT:-98%}
+    $FZF_DEFAULT_OPTS
+    $FZF_CTRL_T_OPTS
+"
+
 __panes_current_session () {
     # -s: restrict to current session
     session="$(tmux display-message -p "#S")"
@@ -54,8 +70,6 @@ __detach_session () {
 }
 
 fuzzy_jump_to_session () {
-    preview_cmd="tmux capture-pane -ep -t '{3}'"
-    # header="tmux list-panes -s -F '#{pane_current_command}' -t {3}"
 
     # TODO: i noticed fzf's changelog mentions it's phasing {fzf:prompt} out in favor of FZF_PROMPT.
     transformer="
@@ -71,10 +85,7 @@ fuzzy_jump_to_session () {
     
     # from outside tmux, jump to a specific pane.
     __panes_detached_sessions |
-        FZF_DEFAULT_OPTS="--height ${FZF_TMUX_HEIGHT:-98%} \
-            --reverse \
-            $FZF_DEFAULT_OPTS $FZF_CTRL_T_OPTS" \
-            fzf -m --cycle --preview="$preview_cmd" --preview-window border-none \
+        fzf \
             --prompt 'Detached Sessions> ' \
             --header 'CTRL-T: Detached/All Panes' \
             --bind "ctrl-t:transform:$transformer" \
@@ -102,10 +113,7 @@ fuzzy_jump_to_pane () {
     "
 
     __panes_current_session | \
-        FZF_DEFAULT_OPTS="--height ${FZF_TMUX_HEIGHT:-98%} \
-            --reverse \
-            $FZF_DEFAULT_OPTS $FZF_CTRL_T_OPTS" \
-            fzf -m --cycle --border=none \
+        fzf \
             --header "CTRL-T: Current/Detached/All Panes" \
             --prompt 'Current Session> ' \
             --bind "ctrl-t:transform:$transformer" \
