@@ -8,8 +8,6 @@
 # from outside:
 #   opens an FZF selection, where the default choices are any pane in any non-attached session
 #
-# TODO: add a hotkey(?) to allow detaching an attached session in order to switch to it
-
 # https://superuser.com/questions/1150431/how-to-select-window-by-working-directory-in-tmux
 
 # SCRIPT=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)
@@ -39,7 +37,22 @@ __panes_all_sessions () {
         sed -e "s@$HOME@\$HOME@"
 }
 
-# TODO: allow passing an argument for `attach-session -d` to detach other clients from a target session
+__detach_session () {
+    # detaches a given session, if it's attached.
+    session_name="$1"
+    [ -z "$session_name" ] && exit 1
+
+    # don't detach if we're in that session already
+    if [ -n "$TMUX" ] && [ "$(tmux display-message -p "#S")" = "$session_name" ]; then
+        return 1
+    fi
+
+    current_attached="$(tmux list-sessions -f '#{session_attached}' -F '#{session_name}')"
+    if [ "$(echo "$current_attached" | grep -c "^${session_name}$")" -eq 1 ]; then
+        tmux detach-client -s "$session_name"
+    fi
+}
+
 fuzzy_jump_to_session () {
     preview_cmd="tmux capture-pane -ep -t '{3}'"
     # header="tmux list-panes -s -F '#{pane_current_command}' -t {3}"
@@ -97,9 +110,14 @@ fuzzy_jump_to_pane () {
             --prompt 'Current Session> ' \
             --bind "ctrl-t:transform:$transformer" \
             --with-nth 1,3,4,5 |
-        while read -r _session_name window pane _cmd _pth; do
+        while read -r session_name window pane _cmd _pth; do
             tmux select-window -t "$window" && \
                 tmux select-pane -t "$pane"
+
+            # detach target session if necessary, then switch to it.
+            __detach_session "$session_name"
+            tmux switch-client -t "$session_name"
+
             return
         done
 }
@@ -123,6 +141,8 @@ fuzzy_select_from_anywhere () {
         pane=$(echo "$output" | awk '{print $3}')
 
         [ -z "$session" ] && exit 0
+
+        __detach_session "$session"
 
         # funny ordering to ensure the right window+pane are active before we attach.
         tmux select-window -t "$window" && \
