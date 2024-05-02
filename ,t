@@ -70,10 +70,8 @@ __detach_session () {
 }
 
 fuzzy_jump_to_session () {
-
-    # TODO: i noticed fzf's changelog mentions it's phasing {fzf:prompt} out in favor of FZF_PROMPT.
     transformer="
-        case {fzf:prompt} in
+        case \$FZF_PROMPT in
             'Detached Sessions> ')
                 echo 'change-prompt(All Sessions> )+reload($SCRIPT __panes_all_sessions)'
                 ;;
@@ -99,7 +97,7 @@ fuzzy_jump_to_pane () {
     # from inside tmux, jump to a specific pane.
 
     transformer="
-        case {fzf:prompt} in
+        case \$FZF_PROMPT in
             'Current Session> ')
                 echo 'change-prompt(Detached Sessions> )+reload($SCRIPT __panes_detached_sessions)'
                 ;;
